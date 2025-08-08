@@ -1,0 +1,13 @@
+device:
+  type: ring
+  radius: 60
+  width: 1
+  resolution: 1
+gap: 1
+coupler:
+  type: pulley
+  length: 80
+  height: 17
+  width: 1
+  ring_down: ['r: 0.77', 'm']
+layer: [2, 0]

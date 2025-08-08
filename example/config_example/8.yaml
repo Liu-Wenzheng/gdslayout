@@ -1,0 +1,18 @@
+device:
+  type: PhC_optomechanics1
+  length: 100
+  half_height: 50
+  phc_width: 6
+  spacing: 4
+  radius: 1
+  center_displacement_offset: [2, 2, 2]
+  side_displacement_offset: 2
+  side_order: 8
+  bbox_cut: false
+  resolution: 0.02
+gap: -0.5
+coupler:
+  type: point
+  length: [50, 50]
+  width: 1
+layer: [2, 0]

@@ -1,0 +1,17 @@
+device:
+  type: ring
+  radius: 60
+  width: 1
+  resolution: 1
+gap: 1
+coupler:
+  type: out_point
+  length: 60
+  width: 1
+  height: 20
+  coupling_length: 0
+  Rc: 50
+  Rc0: null
+  extend_length: 0
+  ring_down: ['r: 1.5', 'm']
+layer: [2, 0]

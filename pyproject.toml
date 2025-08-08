@@ -1,0 +1,6 @@
+[project]
+name = "gdslayout"
+version = "0.1.0"
+
+[tool.setuptools.packages.find]
+where = ["src"]  # Look for packages inside the 'src' directory

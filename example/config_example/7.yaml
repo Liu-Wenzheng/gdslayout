@@ -1,0 +1,25 @@
+device:
+  type: spiral
+  straight_length: 650
+  left_length: 400
+  right_length: 10
+  width: 1
+  num_turns: 2
+  spiral_gap: 20
+  inner_gap: 220
+  p: 0.8
+  translation: 0.035
+  resolution: 0.5
+gap: 0.5
+coupler:
+  type: out_point
+  length: 150
+  width: 1
+  height: 20
+  coupling_length: 0
+  Rc: 261
+  Rc0: 261
+  extend_length: 210
+  ring_down: ['r: 0.376', 't']
+  resolution: 0.5
+layer: [2, 0]

@@ -1,0 +1,21 @@
+device:
+  type: optomechanical_mass
+  mass_width: 120
+  mass_height: 150
+  outcrop_width: 20
+  outcrop_height: 5
+  release_hole_width: 2
+  release_hole_spacing_x: 2
+  release_hole_height: 6
+  release_hole_spacing_y: 2.75
+  spring_height: 20
+  num_beams: 4
+
+  beam_width: 0.5
+  bend_radius: 1.0
+  straight_length: 20.0
+  straight_vertical_length: 0.75
+  anchor_radius: 1.25
+  rows: 4
+
+layer: [2, 0]

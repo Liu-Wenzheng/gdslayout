@@ -1,0 +1,30 @@
+device:
+  type: PhC_optomechanics2
+  length: 100
+  height_num1: 10
+  height_num2: 1
+  height_num3: 3
+  height_num4: 5
+  spacing: 4
+  radius: 1
+  phc_width: 6
+  coupling_phc_num: 5
+  center_displacement_offset: [2, 2, 2]
+  side_displacement_offset: 2
+  side_order: 8
+  bbox_cut: true
+  resolution: 0.02
+coupler:
+  - type: port_coupler
+    length: 10
+    side: 'left'
+    width: 4.9282
+    etch_info: [10, 'b']
+  - type: port_coupler
+    length: 10
+    side: 'right'
+    width: 4.9282
+    etch_info: [15, 'b']
+    ring_down: ['r: 1.25', 'b']
+
+layer: [2, 0]
