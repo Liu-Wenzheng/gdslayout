@@ -301,6 +301,7 @@ class Structure:
     
         coupler_functions = {
             'pulley': symmetric_pulley_coupler,
+            'asym_pulley': asymmetric_pulley_coupler,
             'out_point': out_point_coupler,
             'point': point_coupler,
             'port_coupler': port_coupler
@@ -441,17 +442,16 @@ class Structure:
         Returns:
             gf.Component: The complete structure component
         """
-
         if self.component is not None and not force_rebuild:
             return self.component
 
         self.device, self.device_path = self._load_device(details=details)
         self.coupler, self.coupler_path = self._load_coupler(details=details)
 
-        try:
-            component = gf.Component("toplevel")
-        except ValueError:
-            component = gf.Component()
+        if gf.kcl.has_cell("toplevel"):
+            cell_to_delete = gf.kcl["toplevel"]
+            gf.kcl.delete_cell(cell_to_delete)
+        component = gf.Component("toplevel")
 
         port_mapping = {}
 

@@ -92,6 +92,49 @@ def symmetric_pulley_coupler(
     return component, path
 
 
+def asymmetric_pulley_coupler(
+    width: float = 1.0, 
+    length: float = 100.0, 
+    height: float = 20.0, 
+    theta_in: float = np.pi/6, 
+    theta_out: float = np.pi/6, 
+    Rc0: float = None, 
+    center: tuple = (0, 50), 
+    ring_down: tuple = None, 
+    resolution: float = 1.0, 
+    layer: Any = (1,0)
+):
+    """
+    Returns a symmetric pulley coupler component.
+    """
+
+    Rc = center[1]
+    d = Rc - height
+    if ring_down is not None:
+        [l2, d2] = [ring_down[0], -ring_down[1]]
+    else:
+        l2, d2 = length, d
+    x_arr, y_arr = pulley_coupler_connector(l1=length, l2=l2, d1=d, d2=d2, θ1=theta_in, θ2=theta_out, Rc=Rc, Rc0=Rc0, steps=40, resolution=resolution, output=False)
+    points = np.column_stack((x_arr, y_arr))
+    path = gf.Path(points)
+
+    cross_section = gf.cross_section.strip(width=width, layer=layer)
+    component = gf.path.extrude(path, cross_section)
+    
+    start_point = path.points[0]
+    end_point = path.points[-1]
+
+    start_dir = path.points[0] - path.points[1]
+    end_dir = path.points[-1] - path.points[-2]
+    start_angle = np.arctan2(start_dir[1], start_dir[0]) * 180 / np.pi
+    end_angle = np.arctan2(end_dir[1], end_dir[0]) * 180 / np.pi
+
+    component.add_port(name='in', center=start_point, width=width, orientation=start_angle, layer=layer)
+    component.add_port(name='out', center=end_point, width=width, orientation=end_angle, layer=layer)
+
+    return component, path
+
+
 def out_point_coupler(
     width: float = 1.0, 
     length: float = 50.0, 

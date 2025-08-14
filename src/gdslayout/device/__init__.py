@@ -41,6 +41,7 @@ from .cavity import (
 from .coupler import (
     point_coupler,
     symmetric_pulley_coupler,
+    asymmetric_pulley_coupler,
     out_point_coupler,
     port_coupler
 )
@@ -69,6 +70,7 @@ __all__ = [
     # Coupler functions
     'point_coupler',
     'symmetric_pulley_coupler', 
+    'asymmetric_pulley_coupler',
     'out_point_coupler',
     'port_coupler',
 

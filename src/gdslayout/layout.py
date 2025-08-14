@@ -4,31 +4,31 @@ import time
 
 def distance_point_to_segment(point, seg_start, seg_end):
     """
-    计算一个点到一条有限线段的最短距离和最近点坐标。
-    这是一个关键的几何辅助函数。
+    Calculate the shortest distance from a point to a finite line segment and the closest point coordinates.
+    This is a key geometric helper function.
 
     Args:
-        point (np.array): 目标点的坐标 [x, y]。
-        seg_start (np.array): 线段起点的坐标 [x, y]。
-        seg_end (np.array): 线段终点的坐标 [x, y]。
+        point (np.array): Target point coordinates [x, y].
+        seg_start (np.array): Line segment start point coordinates [x, y].
+        seg_end (np.array): Line segment end point coordinates [x, y].
 
     Returns:
-        tuple: (最短距离, 线段上的最近点坐标)。
+        tuple: (shortest distance, closest point coordinates on the segment).
     """
-    # 线段向量
+    # Line segment vector
     line_vec = seg_end - seg_start
-    # 计算线段长度的平方，以避免开方运算，提高效率
+    # Calculate the square of the line segment length to avoid square root calculation for efficiency
     line_len_sq = np.sum(line_vec**2)
     
-    # 特殊情况：如果线段的起点和终点重合，它是一个点
+    # Special case: if the start and end points of the segment coincide, it's a point
     if line_len_sq < 1e-9:
         return np.linalg.norm(point - seg_start), seg_start
 
-    # 将点投影到线段所在的无限长直线上。
-    # t 是投影点在线段方向上的相对位置。
+    # Project the point onto the infinite line containing the segment.
+    # t is the relative position of the projected point along the segment direction.
     t = np.dot(point - seg_start, line_vec) / line_len_sq
     
-    # 根据t的值判断最近点的位置
+    # Determine the position of the closest point based on the value of t
     if t < 0.0:
         closest_point = seg_start
     elif t > 1.0:
@@ -41,25 +41,26 @@ def distance_point_to_segment(point, seg_start, seg_end):
 
 def find_shortest_distances_kdtree(curve_points, points_to_test, k=5):
     """
-    【核心函数】
-    使用 scipy.spatial.KDTree 高效计算点集到分段线性曲线的【带符号】最短距离和【距离向量】。
+    【Core Function】
+    Use scipy.spatial.KDTree to efficiently compute the signed shortest distances and distance vectors
+    from a point set to a piecewise linear curve.
 
     Args:
-        curve_points (np.array): 定义曲线的N*2点集, 必须按顺序连接。
-        points_to_test (np.array): 待测的M*2点集。
-        k (int): 对于每个待测点，查询k个最近的曲线顶点以确定候选线段。
+        curve_points (np.array): N*2 point set defining the curve, must be connected in order.
+        points_to_test (np.array): M*2 point set to be tested.
+        k (int): For each test point, query k nearest curve vertices to determine candidate segments.
 
     Returns:
-        tuple: (带符号的最短距离数组, 对应的距离向量数组)
+        tuple: (signed shortest distance array, corresponding distance vector array)
     """
-    # print(f"开始计算... 曲线点数: {len(curve_points)}, 待测点数: {len(points_to_test)}")
+    # print(f"Starting calculation... Curve points: {len(curve_points)}, Test points: {len(points_to_test)}")
     # start_time = time.time()
     
     curve_kdtree = KDTree(curve_points)
     segments = np.array(list(zip(curve_points[:-1], curve_points[1:])))
     
     signed_distances = []
-    distance_vectors = [] # <--- 修改：存储距离向量
+    distance_vectors = [] # <--- Modified: store distance vectors
     
     for pt in points_to_test:
         _, indices = curve_kdtree.query(pt, k=k)
@@ -87,9 +88,9 @@ def find_shortest_distances_kdtree(curve_points, points_to_test, k=5):
                 closest_pt_for_pt = closest_pt_on_seg
                 best_seg_idx = seg_idx
         
-        # --- 计算距离的符号 ---
+        # --- Calculate the sign of the distance ---
         sign = 0.0
-        vec_to_point = pt - closest_pt_for_pt # <--- 修改：计算向量
+        vec_to_point = pt - closest_pt_for_pt # <--- Modified: calculate vector
         
         if best_seg_idx != -1 and min_dist_for_pt > 1e-9:
             seg_start, seg_end = segments[best_seg_idx]
@@ -99,10 +100,10 @@ def find_shortest_distances_kdtree(curve_points, points_to_test, k=5):
             sign = np.sign(dot_product)
 
         signed_distances.append(min_dist_for_pt * sign)
-        distance_vectors.append(vec_to_point) # <--- 修改：存储向量
+        distance_vectors.append(vec_to_point) # <--- Modified: store vector
     
     # end_time = time.time()
-    # print(f"计算完成，耗时: {end_time - start_time:.4f} 秒。")
+    # print(f"Calculation completed, time elapsed: {end_time - start_time:.4f} seconds.")
 
     return np.array(signed_distances), np.array(distance_vectors)
 
@@ -184,20 +185,20 @@ class Ring_down_distance:
 
     def weighted_average_linear(self, V, w, alpha=1.0):
         """
-        线性权重:
+        Linear weighting:
             w' = ((w_max - w) / (w_max - w_min)) ** alpha
-        α≥1 时，α 越大，越聚焦到最小 (最负) 的 w。
+        When α≥1, the larger α is, the more focused on the minimum (most negative) w.
         """
         w = np.asarray(w, dtype=float)
         V = np.asarray(V, dtype=float)
         w_max, w_min = w.max(), w.min()
-        if w_max == w_min:                 # 退化为普通平均
+        if w_max == w_min:                 # Degenerate to ordinary average
             weights = np.ones_like(w) / len(w)
         else:
             weights_raw = (w_max - w) / (w_max - w_min)
             weights_raw = weights_raw**alpha
             weights = weights_raw / weights_raw.sum()
-        return V @ weights                # 2‑维向量
+        return V @ weights                # 2-dimensional vector
 
     def weighted_average_exp(self, V, w, k=1.0, method="shift"):
         V = np.asarray(V, dtype=float)
@@ -221,6 +222,6 @@ class Ring_down_distance:
         return V @ weights
 
     def weighted_average_min(self, V, w):
-        """直接返回对应最负 w 的列。"""
+        """Directly return the column corresponding to the most negative w."""
         idx = int(np.argmin(w))
         return V[:, idx]

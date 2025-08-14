@@ -188,7 +188,7 @@ class Cluster():
         return (sub_cluster[0], sub_cluster[1]), np.max(self.component_ysize)+self.edge_coupler_width+2*self.safe_gap
 
 
-    def build_layout_n(self, x_border, y_border, length_tot, y_drift, edge_coupler_distance, tot_drift, auto=(True, False)):
+    def build_layout_n(self, x_border, y_border, length_tot, y_drift, edge_coupler_distance, tot_drift, auto=(True, False), manual=([], [])):
         """if np.sum(self.device_xsize) > length_tot-x_border[0]-x_border[1]:
             raise ValueError("Insufficient space to fit the cluster!")"""
         
@@ -210,7 +210,6 @@ class Cluster():
             for i in tqdm(range(self.num-1), desc="Calculating component gaps"):
                 dist = Ring_down_distance(self.component[i], self.component[i+1], shift1=component_shift[i], shift2=component_shift[i+1], layer=self.layer)
                 component_gap[i] = dist.calculate(type='exp', alpha=100)
-                
             component_gap_ave = np.mean(component_gap, axis=0)
             if auto[0]:
                 if component_gap_ave[0] < 0:
@@ -224,10 +223,19 @@ class Cluster():
                 extra_shift_y = np.zeros(self.num-1)
                 for i in range(self.num-1):
                     if component_gap[i, 1] < self.safe_gap and np.linalg.norm(component_gap[i]) < self.safe_gap:
-                        print("move", component_gap[i, 1])
                         extra_shift_y[i] = self.safe_gap - component_gap[i, 1]
                 component_shift_y = np.cumsum(extra_shift_y[::-1])[::-1]
                 component_shift[:-1, 1] -= component_shift_y
+
+        elif any(manual):
+            if manual[0]:
+                if len(manual[0]) != self.num-2:
+                    raise ValueError(f"Manual shift x should be a list of length {self.num-1}.")
+                component_shift[1:-1, 0] += manual[0]
+            if manual[1]:
+                if len(manual[1]) != self.num:
+                    raise ValueError(f"Manual shift y should be a list of length {self.num}.")
+                component_shift[:, 1] += manual[1]
 
         self.text_pos = np.zeros((self.num, 4))
         ymax_arr = []
@@ -294,7 +302,7 @@ class Cluster():
         return cluster
 
 
-    def build_layout(self, Chip, x_border, y_border, length_tot, y_drift, edge_coupler_distance, tot_drift, text=True, auto=(True, False)):
+    def build_layout(self, Chip, x_border, y_border, length_tot, y_drift, edge_coupler_distance, tot_drift, text=True, auto=(True, False), manual=([], [])):
         ref = [tot_drift[0], tot_drift[0]+length_tot]
         if self.num == 1:
             cluster, y_len = self.build_layout_1(x_border, y_border, length_tot, y_drift, tot_drift)
@@ -310,7 +318,7 @@ class Cluster():
                 Chip << dev
 
         else:
-            cluster, y_len = self.build_layout_n(x_border, y_border, length_tot, y_drift, edge_coupler_distance, tot_drift, auto=auto)
+            cluster, y_len = self.build_layout_n(x_border, y_border, length_tot, y_drift, edge_coupler_distance, tot_drift, auto=auto, manual=manual)
             if text:
                 for i in range(self.num):
                     cluster = self.add_text(cluster, id=i, ref=ref)
