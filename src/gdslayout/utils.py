@@ -275,7 +275,7 @@ class bend8:
         plt.show()
 
 
-def bend5_initial_guess_iter(l, h, θ1=0, k1=0, k1p=0,steps=10, output=True):
+def bend5_initial_guess_iter(l, h, θ1=0, k1=0, k1p=0,steps=10, output=False):
     h0 = 20
     l0=  100
     θ10 = 0
@@ -298,7 +298,7 @@ def bend5_initial_guess_iter(l, h, θ1=0, k1=0, k1p=0,steps=10, output=True):
         print(initial_guess)
     return solver
 
-def bend8_initial_guess_iter(l, h, θ0=0, k0=0, k0p=0, θ1=0, k1=0, k1p=0, steps=10, output=True):
+def bend8_initial_guess_iter(l, h, θ0=0, k0=0, k0p=0, θ1=0, k1=0, k1p=0, steps=10, output=False):
     h0 = 10
     l0=  280
     θ00 = 0
@@ -307,7 +307,8 @@ def bend8_initial_guess_iter(l, h, θ0=0, k0=0, k0p=0, θ1=0, k1=0, k1p=0, steps
     θ10 = -np.pi
     k10 = 0
     k1p0 = 0
-    initial_guess = [763.4267041158737, 6.302786656654149e-07, -3.857288089221114e-09, 6.860909349228811e-12, -3.785222972099947e-15]
+
+    initial_guess = [403.9330690840626, 2.1700104743235264e-06, -3.11213851862657e-08, 1.1370101463262695e-10, -1.2385911631149373e-13]
 
     h_arr = np.linspace(h0, h, steps)
     l_arr = np.linspace(l0, l, steps)

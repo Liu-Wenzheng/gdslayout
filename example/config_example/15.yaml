@@ -1,0 +1,12 @@
+device:
+  type: spiral_archimedean2
+  boundary_length: 150
+  boundary_depth: 68
+  boundary_radius: 35
+  width: 1 
+  num_turns: 10
+  spiral_gap: 5
+  inner_gap: 100
+  translation: 0
+  resolution: 0.5
+layer: [2, 0]

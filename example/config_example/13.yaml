@@ -1,0 +1,15 @@
+device:
+  type: ring
+  radius: 60
+  width: 1
+  resolution: 1
+gap: 1
+coupler:
+  type: asym_pulley
+  length: 80
+  height: 17
+  theta_in: 0
+  theta_out: 1.5
+  width: 1
+  ring_down: ['r: 0.77', 'm']
+layer: [2, 0]

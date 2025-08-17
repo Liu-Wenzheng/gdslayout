@@ -37,6 +37,11 @@ from .cavity import (
     spiral
 )
 
+from .archimedean import (
+    spiral_archimedean1,
+    spiral_archimedean2
+)
+
 # Import coupler functions
 from .coupler import (
     point_coupler,
@@ -66,7 +71,10 @@ __all__ = [
     'ring',
     'race_track',
     'spiral',
-    
+
+    'spiral_archimedean1',
+    'spiral_archimedean2',
+
     # Coupler functions
     'point_coupler',
     'symmetric_pulley_coupler', 

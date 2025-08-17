@@ -220,6 +220,8 @@ class Structure:
             'ring': ring,
             'spiral': spiral,
             'racetrack': race_track,
+            'spiral_archimedean1': spiral_archimedean1,
+            'spiral_archimedean2': spiral_archimedean2,
             'PhC_optomechanics1': PhC_optomechanics1,
             'PhC_optomechanics2': PhC_optomechanics2,
             'optomechanical_mass': optomechanical_mass,

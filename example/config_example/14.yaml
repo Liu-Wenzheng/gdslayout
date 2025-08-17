@@ -1,0 +1,15 @@
+device:
+  type: spiral_archimedean1
+  flat_length: 250
+  transit_length: 120
+  transit_depth: 5
+  boundary_length: 600
+  boundary_depth: 220
+  boundary_radius: 200
+  width: 1
+  num_turns: 50
+  spiral_gap: 5
+  inner_gap: 250
+  translation: 0
+  resolution: 0.5
+layer: [2, 0]
