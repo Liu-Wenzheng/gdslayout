@@ -48,6 +48,7 @@ from .coupler import (
     symmetric_pulley_coupler,
     asymmetric_pulley_coupler,
     out_point_coupler,
+    dual_out_point_coupler,
     port_coupler
 )
 
@@ -80,6 +81,7 @@ __all__ = [
     'symmetric_pulley_coupler', 
     'asymmetric_pulley_coupler',
     'out_point_coupler',
+    'dual_out_point_coupler',
     'port_coupler',
 
     'PhC_optomechanics1',

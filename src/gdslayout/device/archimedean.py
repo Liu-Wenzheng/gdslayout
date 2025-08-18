@@ -1,5 +1,5 @@
 import numpy as np
-from ..utils import bend8_initial_guess_iter, path_to_polygon
+from ..utils import bend8_initial_guess_iter, path_to_polygon, translate_array
 from gdsfactory.typings import Any
 import gdsfactory as gf
 
@@ -132,46 +132,6 @@ def spiral_archimedean_inner_connector(spiral, steps=20, resolution=1):
     return np.array(x_pos), np.array(y_pos)
 
 
-"""def spiral_archimedean_outer_coupling_connector(spiral, theta1, theta2, transit_length=120, transit_depth=5, flat_length = 40, steps=10, resolution = 1, output=False):
-
-    solver = bend8_initial_guess_iter(l=flat_length+transit_length, h=-spiral.a * np.pi + transit_depth,
-                                      θ0=-(np.pi - spiral.tangent_angle(theta1)), k0=spiral.curvature(theta1), k0p=spiral.dcurvature_ds(theta1),
-                                      θ1=-np.pi, k1=0, k1p=0,
-                                      steps=steps)
-    
-    x_pos, y_pos = solver.draw_path(plot=False)
-
-    dx = np.diff(x_pos)
-    dy = np.diff(y_pos)
-    ds = np.sqrt((dx) ** 2 + (dy) ** 2)
-    length = np.sum(ds)
-    n = int(length/resolution)
-    x_pos, y_pos = solver.draw_path(n, plot=False)
-
-    transit = bend8_initial_guess_iter(l=transit_length, h=-transit_depth,
-                                      θ0=-spiral.tangent_angle(theta2), k0=-spiral.curvature(theta2), k0p=spiral.dcurvature_ds(theta2),
-                                      θ1=0, k1=0, k1p=0,
-                                      steps=steps)
-    
-    x_pos_t, y_pos_t = transit.draw_path(plot=False)
-
-    dx = np.diff(x_pos_t)
-    dy = np.diff(y_pos_t)
-    ds = np.sqrt((dx) ** 2 + (dy) ** 2)
-    length = np.sum(ds)
-    n = int(length/resolution)
-    x_pos_t, y_pos_t = transit.draw_path(n, plot=False)
-
-    n_straight = int(x_pos[-1]/resolution)
-    x_straight = np.linspace(-x_pos_t[-1], -x_pos[-1], n_straight)
-    y_straight = np.linspace(y_pos_t[-1]+spiral.a* np.pi, -y_pos[-1], n_straight)
-
-    x_combined = np.concatenate((-x_pos_t, x_straight[1:-1], -x_pos[::-1]))
-    y_combined = np.concatenate((y_pos_t+spiral.a* np.pi , y_straight[1:-1], -y_pos[::-1]))
-
-    return x_combined, y_combined"""
-
-
 def spiral_archimedean_outer_coupling_connector(spiral, theta1, theta2, transit_length=120, transit_depth=5, flat_length = 40, boundary_length=None, boundary_depth=None, boundary_radius=None, steps=10, resolution = 1, output=False):
 
     
@@ -243,7 +203,7 @@ def spiral_archimedean_outer_coupling_connector(spiral, theta1, theta2, transit_
         x_combined = np.concatenate((-x_pos_t, x_straight[1:-1], -x_pos[::-1]))
         y_combined = np.concatenate((y_pos_t+spiral.a* np.pi , y_straight[1:-1], -y_pos[::-1]))
 
-    return x_combined, y_combined
+    return x_combined, y_combined, len(x_pos_t)
 
 
 def spiral_archimedean_outer_connector(spiral, theta1, theta2, boundary_length=250, boundary_depth=50, boundary_radius=200, steps=10, resolution=1, output=False):
@@ -315,14 +275,14 @@ def spiral_archimedean1(
     x_arr , y_arr = spiral_archimedean_inner_connector(spiral, resolution=resolution)
     point_mid = np.column_stack((x_arr , y_arr + inner_gap/2))[::-1]
 
-    x_arr , y_arr = spiral_archimedean_outer_coupling_connector(spiral, theta1, theta2, flat_length=flat_length, transit_length=transit_length, transit_depth=transit_depth, 
+    x_arr , y_arr, flat_point_start = spiral_archimedean_outer_coupling_connector(spiral, theta1, theta2, flat_length=flat_length, transit_length=transit_length, transit_depth=transit_depth, 
                                                                 boundary_length=boundary_length, boundary_depth=boundary_depth, boundary_radius=boundary_radius, steps=800, resolution=resolution)
     point_init = np.column_stack((x_arr , y_arr + spiral.r(theta1)))[::-1]
 
     points = np.concatenate([np.array(points2)[::-1], point_mid[1:-1], np.array(points1), point_init[1:]], axis=0)
-
+    points = translate_array(points, translation)
     path = gf.Path(points)
-    x_c, y_c = points[0]
+    x_c, y_c = point_init[-flat_point_start-1]
 
     component = path_to_polygon(path, width_fn=width, layer=layer)[0]
     component.add_port(name="coupler", center=(x_c, y_c+width/2), width=1, orientation=0, layer=layer)
@@ -364,9 +324,9 @@ def spiral_archimedean2(
     point_init = np.column_stack((x_arr , y_arr + spiral.r(theta1)))[::-1]
 
     points = np.concatenate([np.array(points2)[::-1], point_mid[1:-1], np.array(points1), point_init[1:]], axis=0)
-
+    points = translate_array(points, translation)
     path = gf.Path(points)
-    x_c, y_c = points[0]
+    x_c, y_c = points1[-1]
 
     component = path_to_polygon(path, width_fn=width, layer=layer)[0]
     component.add_port(name="coupler", center=(x_c, y_c+width/2), width=1, orientation=0, layer=layer)

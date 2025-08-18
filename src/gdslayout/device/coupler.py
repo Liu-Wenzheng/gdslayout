@@ -155,8 +155,8 @@ def out_point_coupler(
     if coupling_length:
         x_pos_in, y_pos_in = spiral_inner_connector(length=length, gap=height, steps=40, resolution=resolution, output=False)
         x_pos_c = np.linspace(-coupling_length/2, coupling_length/2, int(coupling_length/resolution))
-        x_arr = np.concatenate((x_pos_in-length/2-coupling_length/2, x_pos_c, -x_pos_in[::-1]+length/2+coupling_length/2))
-        y_arr = np.concatenate((-y_pos_in-height/2, np.zeros_like(x_pos_c)-height, -y_pos_in[::-1]-height/2))
+        x_arr = np.concatenate((x_pos_in-length/2-coupling_length/2, x_pos_c[1:-1], -x_pos_in[::-1]+length/2+coupling_length/2))
+        y_arr = np.concatenate((-y_pos_in-height/2, np.zeros_like(x_pos_c)[1:-1]-height, -y_pos_in[::-1]-height/2))
     elif coupling_length ==0 and Rc0 is not None:
         x_arr, y_arr = pulley_coupler_connector(l1=length, l2=length, d1=Rc-height, d2=Rc-height, θ1=0, θ2=0, Rc=Rc, Rc0=Rc0, steps=40, resolution=resolution, output=False)
         y_arr = -y_arr+Rc-height
@@ -180,6 +180,74 @@ def out_point_coupler(
         path_bender = gf.Path(points_bender)
         path.append(path_bender)
     
+    cross_section = gf.cross_section.strip(width=width, layer=layer)
+    component = gf.path.extrude(path, cross_section)
+    
+    start_point = path.points[0]
+    end_point = path.points[-1]
+
+    start_dir = path.points[0] - path.points[1]
+    end_dir = path.points[-1] - path.points[-2]
+    start_angle = np.arctan2(start_dir[1], start_dir[0]) * 180 / np.pi
+    end_angle = np.arctan2(end_dir[1], end_dir[0]) * 180 / np.pi
+
+    component.add_port(name='in', center=start_point, width=width, orientation=start_angle, layer=layer)
+    component.add_port(name='out', center=end_point, width=width, orientation=end_angle, layer=layer)
+    return component, path
+
+
+def dual_out_point_coupler(
+    width: float = 1.0, 
+    length: tuple = (50.0, 50.0), 
+    height: tuple = (20.0, 20.0), 
+    coupling_length: tuple = (5.0, 5.0), 
+    Rc: tuple = (50.0, 50.0), 
+    Rc0: tuple = (None, None), 
+    extend_length: float = 100.0,
+    center: tuple = (0, 50),
+    center1_shift: tuple = (160, 30),
+    ring_down: tuple = None, 
+    resolution: float = 1.0, 
+    layer: Any = (1,0)
+):
+    _, path1 = out_point_coupler(
+        width=width, 
+        length=length[0], 
+        height=height[0], 
+        coupling_length=coupling_length[0], 
+        Rc=Rc[0], 
+        Rc0=Rc0[0], 
+        extend_length=extend_length, 
+        center=center, 
+        ring_down=ring_down, 
+        resolution=resolution, 
+        layer=layer
+    )
+    _, path2 = out_point_coupler(
+        width=width, 
+        length=length[1], 
+        height=height[1], 
+        coupling_length=coupling_length[1], 
+        Rc=Rc[1], 
+        Rc0=Rc0[1], 
+        extend_length=extend_length, 
+        center=(center[0]+center1_shift[0], center[1]+center1_shift[1]), 
+        ring_down=ring_down, 
+        resolution=resolution, 
+        layer=layer
+    )
+
+    points1 = path1.points
+    points2 = path2.points
+    x1, y1 = points1[-1]
+    x2, y2 = points2[0]
+    if y1 == y2:
+        points = np.concatenate((points1, points2))
+    else:
+        x_arr, y_arr = spiral_inner_connector(length=x2-x1, gap=y2-y1, steps=40, resolution=resolution, output=False)
+        points = np.concatenate((points1, np.column_stack((x_arr+(x1-x_arr[0]), y_arr+(y1-y_arr[0])))[1:], points2[1:]), axis=0)
+    path = gf.Path(points)
+
     cross_section = gf.cross_section.strip(width=width, layer=layer)
     component = gf.path.extrude(path, cross_section)
     

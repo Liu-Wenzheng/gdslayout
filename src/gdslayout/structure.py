@@ -305,11 +305,11 @@ class Structure:
             'pulley': symmetric_pulley_coupler,
             'asym_pulley': asymmetric_pulley_coupler,
             'out_point': out_point_coupler,
+            'dual_out_point': dual_out_point_coupler,
             'point': point_coupler,
             'port_coupler': port_coupler
         }
 
-        
         if not self.port_coupling:
             coupler_config_list = [coupler_config]
         else:
@@ -567,7 +567,7 @@ class Structure:
             return info
         else:
             if 'coupler' not in self.config:
-                (device, path), _ = self._load_device()
+                (device, path) = self._load_device()
                 device.write_gds(gdspath=gds_filename)
                 return gds_filename
             if 'device' not in self.config:
