@@ -219,7 +219,7 @@ def dual_out_point_coupler(
         Rc0=Rc0[0], 
         extend_length=extend_length, 
         center=center, 
-        ring_down=ring_down, 
+        ring_down= None, 
         resolution=resolution, 
         layer=layer
     )

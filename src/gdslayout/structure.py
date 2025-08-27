@@ -437,7 +437,7 @@ class Structure:
         except Exception as e:
             print(f"Warning: Could not connect ports: {e}")
 
-    def build(self, details=False, force_rebuild=False):
+    def build(self, cell=None, details=False, force_rebuild=False):
         """
         Build the complete structure by loading and combining device and coupler.
         
@@ -450,10 +450,13 @@ class Structure:
         self.device, self.device_path = self._load_device(details=details)
         self.coupler, self.coupler_path = self._load_coupler(details=details)
 
-        if gf.kcl.has_cell("toplevel"):
-            cell_to_delete = gf.kcl["toplevel"]
-            gf.kcl.delete_cell(cell_to_delete)
-        component = gf.Component("toplevel")
+        if cell == "toplevel":
+            if gf.kcl.has_cell(cell):
+                cell_to_delete = gf.kcl[cell]
+                gf.kcl.delete_cell(cell_to_delete)
+            component = gf.Component(cell)
+        else:
+            component = gf.Component()
 
         port_mapping = {}
 
