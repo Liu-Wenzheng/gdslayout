@@ -4,6 +4,7 @@ from typing import Tuple
 import gdsfactory as gf
 from gdsfactory.typings import ComponentSpec, Any
 from gdsfactory.components.containers.component_sequence import component_sequence
+from . import register_device
 
 
 class OptoMechanicalMass:
@@ -278,6 +279,7 @@ class SerpentineSpring:
         return inverted_spring
     
 
+@register_device("optomechanical_mass")
 def optomechanical_mass(
     mass_width: float = 120,
     mass_height: float = 150,

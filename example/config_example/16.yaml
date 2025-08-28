@@ -1,0 +1,28 @@
+device:
+  type: spiral_archimedean1_varwidth
+  flat_length: 300
+  transit_length: 70
+  transit_depth: 5
+  boundary_length: 600
+  boundary_depth: 220
+  boundary_radius: 200
+  width: 1
+  num_turns: 50
+  spiral_gap: 5
+  inner_gap: 250
+  translation: 0
+  resolution: 0.5
+gap: 0.5
+coupler:
+  type: dual_out_point
+  width: 1
+  length: [50, 50]
+  height: [20, 20]
+  coupling_length: [5, 5]
+  Rc: [50, 50]
+  Rc0: [None, None]
+  extend_length: 100
+  center: [0, 50]
+  center1_shift: [160, 0]
+  resolution: 1
+layer: [2, 0]

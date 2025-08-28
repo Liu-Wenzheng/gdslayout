@@ -4,8 +4,10 @@ import gdsfactory as gf
 from gdsfactory.typings import Any
 
 from ..utils import spiral_inner_connector, pulley_coupler_connector
+from . import register_coupler
 
 
+@register_coupler("point")
 def point_coupler(
         width: float = 1.0, 
         length: float = 100.0, 
@@ -50,6 +52,7 @@ def point_coupler(
     return component, path
 
 
+@register_coupler("pulley")
 def symmetric_pulley_coupler(
     width: float = 1.0, 
     length: float = 100.0, 
@@ -91,7 +94,7 @@ def symmetric_pulley_coupler(
 
     return component, path
 
-
+@register_coupler("asym_pulley")
 def asymmetric_pulley_coupler(
     width: float = 1.0, 
     length: float = 100.0, 
@@ -134,7 +137,7 @@ def asymmetric_pulley_coupler(
 
     return component, path
 
-
+@register_coupler("out_point")
 def out_point_coupler(
     width: float = 1.0, 
     length: float = 50.0, 
@@ -196,6 +199,7 @@ def out_point_coupler(
     return component, path
 
 
+@register_coupler("dual_out_point")
 def dual_out_point_coupler(
     width: float = 1.0, 
     length: tuple = (50.0, 50.0), 
@@ -279,6 +283,7 @@ def _calculate_normals(points: np.ndarray) -> np.ndarray:
     return normals
 
 
+@register_coupler("port_coupler")
 def port_coupler(
     width: float = 1.0,
     side: str = 'left',

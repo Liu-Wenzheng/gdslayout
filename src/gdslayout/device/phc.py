@@ -5,6 +5,7 @@ import numpy as np
 
 import gdsfactory as gf
 from gdsfactory.typings import Any
+from . import register_device
 
 
 class HexGrid:
@@ -204,6 +205,7 @@ class HexGrid:
         self._center_hexes = self._find_center_hexes()
 
 
+@register_device("PhC_optomechanics1")
 def PhC_optomechanics1(
     length: float = 100, 
     half_height: float = 50, 
@@ -284,6 +286,7 @@ def PhC_optomechanics1(
     return c, polygon_list
     
 
+@register_device("PhC_optomechanics2")
 def PhC_optomechanics2(
     length: float = 100, 
     height_num1: int = 10, 

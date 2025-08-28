@@ -82,6 +82,8 @@ def path_to_polygon(
     elif isinstance(width_fn, (list, tuple, np.ndarray)):
         # Handle array-like width
         w = np.asarray(width_fn, dtype=float)
+        if closed and len(w) > 1:
+            w = w[:-1]                        # drop duplicate
         if len(w) == len(xy):
             # Width array matches path points
             pass

@@ -2,6 +2,7 @@ import numpy as np
 from ..utils import bend8_initial_guess_iter, path_to_polygon, translate_array
 from gdsfactory.typings import Any
 import gdsfactory as gf
+from . import register_device
 
 class ArchimedeanSpiral:
     """
@@ -241,6 +242,7 @@ def spiral_archimedean_outer_connector(spiral, theta1, theta2, boundary_length=2
     return x_combined, y_combined
 
 
+"""@register_device("spiral_archimedean1")
 def spiral_archimedean1(
         flat_length: float = 300,
         transit_length: float = 120,
@@ -257,9 +259,7 @@ def spiral_archimedean1(
         layer: Any = (1, 0)
     ):
 
-    """
-    Returns a spiral component.
-    """
+    # Returns a spiral component.
 
     r0 = inner_gap/2
     a = spiral_gap/np.pi
@@ -286,9 +286,130 @@ def spiral_archimedean1(
 
     component = path_to_polygon(path, width_fn=width, layer=layer)[0]
     component.add_port(name="coupler", center=(x_c, y_c+width/2), width=1, orientation=0, layer=layer)
-    return component, path
+    return component, path"""
 
 
+@register_device("spiral_archimedean1", overwrite=True)
+class SpiralArchimedean1:
+
+    connector_steps: int = 800
+
+    def __init__(self) -> None:
+        pass
+
+    def __call__(
+        self,
+        flat_length: float = 300,
+        transit_length: float = 120,
+        transit_depth: float = 5,
+        boundary_length: Any = None,
+        boundary_depth: Any = None,
+        boundary_radius: Any = None,
+        width: float = 1,
+        num_turns: int = 5,
+        spiral_gap: float = 5,
+        inner_gap: float = 10,
+        translation: float = 0,
+        resolution: float = 1,
+        layer: Any = (1, 0),
+    ):
+
+        r0, a, theta0 = self._spiral_params(inner_gap, spiral_gap)
+        theta1, theta2 = self._turns_to_thetas(num_turns)
+        spiral = self._make_spiral(r0=r0, a=a, theta0=theta0, resolution=resolution)
+
+        self.points1 = spiral.points(theta1, resolution)
+        self.points2 = -spiral.points(theta2, resolution)
+
+        self.point_mid = self._inner_connector_points(
+            spiral, inner_gap=inner_gap, resolution=resolution
+        )
+
+        self.point_init, self.flat_point_start = self._outer_connector_points(
+            spiral=spiral,
+            theta1=theta1,
+            theta2=theta2,
+            flat_length=flat_length,
+            transit_length=transit_length,
+            transit_depth=transit_depth,
+            boundary_length=boundary_length,
+            boundary_depth=boundary_depth,
+            boundary_radius=boundary_radius,
+            steps=self.connector_steps,
+            resolution=resolution,
+        )
+
+        self.points_orig = self._stitch_points(self.points1, self.points2, self.point_mid, self.point_init)
+        points = translate_array(self.points_orig, translation)
+        path = gf.Path(points)
+        self.x_c, self.y_c = self.point_init[-self.flat_point_start - 1]
+        self.spiral_width = self._compute_width_profile(width)
+        component = path_to_polygon(path, width_fn=self.spiral_width, layer=layer)[0]
+        component.add_port(name="coupler", center=(self.x_c, self.y_c + width / 2), width=1, orientation=0, layer=layer)
+        return component, path
+
+    def _spiral_params(self, inner_gap: float, spiral_gap: float):
+        r0 = inner_gap / 2
+        a = spiral_gap / np.pi
+        theta0 = np.pi / 2
+        return r0, a, theta0
+
+    def _turns_to_thetas(self, num_turns: int):
+        theta1 = num_turns * 2 * np.pi
+        theta2 = (num_turns + 0.5) * 2 * np.pi
+        return theta1, theta2
+
+    def _make_spiral(self, r0: float, a: float, theta0: float, resolution: float):
+        return ArchimedeanSpiral(r0=r0, a=a, theta0=theta0)
+
+    def _inner_connector_points(self, spiral, inner_gap: float, resolution: float):
+        x_arr, y_arr = spiral_archimedean_inner_connector(
+            spiral, resolution=resolution
+        )
+        return np.column_stack((x_arr, y_arr + inner_gap / 2))[::-1]
+
+    def _outer_connector_points(
+        self,
+        *,
+        spiral,
+        theta1: float,
+        theta2: float,
+        flat_length: float,
+        transit_length: float,
+        transit_depth: float,
+        boundary_length: Any,
+        boundary_depth: Any,
+        boundary_radius: Any,
+        steps: int,
+        resolution: float,
+    ):
+        x_arr, y_arr, flat_point_start = spiral_archimedean_outer_coupling_connector(
+            spiral,
+            theta1,
+            theta2,
+            flat_length=flat_length,
+            transit_length=transit_length,
+            transit_depth=transit_depth,
+            boundary_length=boundary_length,
+            boundary_depth=boundary_depth,
+            boundary_radius=boundary_radius,
+            steps=steps,
+            resolution=resolution,
+        )
+        pts = np.column_stack((x_arr, y_arr + spiral.r(theta1)))[::-1]
+        return pts, flat_point_start
+    
+    def _compute_width_profile(self, base_width: float):
+        return base_width
+
+    def _stitch_points(self, points1, points2, point_mid, point_init):
+        return np.concatenate(
+            [np.array(points2)[::-1], point_mid[1:-1], np.array(points1), point_init[1:]],
+            axis=0,
+        )
+
+
+"""@register_device("spiral_archimedean2")
 def spiral_archimedean2(
         boundary_length: float = 150,
         boundary_depth: float = 68,
@@ -302,9 +423,7 @@ def spiral_archimedean2(
         layer: Any = (1, 0)
     ):
 
-    """
-    Returns a spiral component.
-    """
+    # Returns a spiral component.
 
     r0 = inner_gap/2
     a = spiral_gap/np.pi
@@ -330,4 +449,134 @@ def spiral_archimedean2(
 
     component = path_to_polygon(path, width_fn=width, layer=layer)[0]
     component.add_port(name="coupler", center=(x_c, y_c+width/2), width=1, orientation=0, layer=layer)
-    return component, path
+    return component, path"""
+
+@register_device("spiral_archimedean2", overwrite=True)
+class SpiralArchimedean2:
+    """
+    面向继承的 Archimedean 螺线器件生成器。
+    入口仍为同名短名 'spiral_archimedean2'，对外行为与原函数一致。
+    """
+
+    # 你可以把一些“结构常量 / 策略”做成属性，子类更易覆盖
+    connector_steps: int = 800
+
+    # 如需传依赖，可在 __init__ 注入；这里保持零参，便于注册器自动实例化
+    def __init__(self) -> None:
+        pass
+
+    # ---- 对外统一入口：与原函数同签名（含默认值）----
+    def __call__(
+        self,
+        boundary_length: float = 150,
+        boundary_depth: float = 68,
+        boundary_radius: float = 35,
+        width: float = 1.0,
+        num_turns: int = 5,
+        spiral_gap: float = 5.0,
+        inner_gap: float = 10.0,
+        translation: float = 0.0,
+        resolution: float = 1.0,
+        layer: Any = (1, 0),
+    ):
+        """
+        Returns: (component, path)
+        """
+        # 1) 计算螺线与关键角度
+        r0, a, theta0 = self._spiral_params(inner_gap, spiral_gap)
+        theta1, theta2 = self._turns_to_thetas(num_turns)
+
+        spiral = self._make_spiral(r0=r0, a=a, theta0=theta0, resolution=resolution)
+
+        points1 = spiral.points(theta1, resolution)
+        points2 = - spiral.points(theta2, resolution)
+
+        # 2) 连接片段（中间/外侧）
+        point_mid = self._inner_connector_points(
+            spiral, inner_gap=inner_gap, resolution=resolution
+        )
+
+        point_init = self._outer_connector_points(
+            spiral,
+            theta1=theta1,
+            theta2=theta2,
+            boundary_length=boundary_length,
+            boundary_depth=boundary_depth,
+            boundary_radius=boundary_radius,
+            steps=self.connector_steps,
+            resolution=resolution,
+        )
+
+        # 3) 拼接全路径 & 平移
+        points = self._stitch_points(points1, points2, point_mid, point_init)
+        points = translate_array(points, translation)
+        path = gf.Path(points)
+
+        # 4) 多边形与端口
+        x_c, y_c = points1[-1]
+        component = path_to_polygon(path, width_fn=width, layer=layer)[0]
+        component.add_port(
+            name="coupler",
+            center=(x_c, y_c + width / 2),
+            width=1,
+            orientation=0,
+            layer=layer,
+        )
+
+        return component, path
+
+    # -------------------------
+    # 下方是可在子类中覆盖的“拼装步骤”
+    # -------------------------
+    def _spiral_params(self, inner_gap: float, spiral_gap: float):
+        """把外部参数翻译为螺线的 r0、a 与起始角。"""
+        r0 = inner_gap / 2
+        a = spiral_gap / np.pi
+        theta0 = np.pi / 2
+        return r0, a, theta0
+
+    def _turns_to_thetas(self, num_turns: int):
+        theta1 = num_turns * 2 * np.pi
+        theta2 = (num_turns + 0.5) * 2 * np.pi
+        return theta1, theta2
+
+    def _make_spiral(self, r0: float, a: float, theta0: float, resolution: float):
+        """构造螺线对象；如需换模型（等距/等角），子类覆盖这里。"""
+        return ArchimedeanSpiral(r0=r0, a=a, theta0=theta0)
+
+    def _inner_connector_points(self, spiral, inner_gap: float, resolution: float):
+        x_arr, y_arr = spiral_archimedean_inner_connector(spiral, resolution=resolution)
+        # 与原实现一致：向上平移 inner_gap/2，并反转顺序
+        return np.column_stack((x_arr, y_arr + inner_gap / 2))[::-1]
+
+    def _outer_connector_points(
+        self,
+        spiral,
+        theta1: float,
+        theta2: float,
+        *,
+        boundary_length: float,
+        boundary_depth: float,
+        boundary_radius: float,
+        steps: int,
+        resolution: float,
+    ):
+        x_arr, y_arr = spiral_archimedean_outer_connector(
+            spiral,
+            theta1,
+            theta2,
+            boundary_length=boundary_length,
+            boundary_depth=boundary_depth,
+            boundary_radius=boundary_radius,
+            steps=steps,
+            resolution=resolution,
+        )
+        # 与原实现一致：相对半径抬高，并反转顺序
+        return np.column_stack((x_arr, y_arr + spiral.r(theta1)))[::-1]
+
+    def _stitch_points(self, points1, points2, point_mid, point_init):
+        """把各段点列按既定顺序拼接成一条闭合路径。"""
+        return np.concatenate(
+            [np.array(points2)[::-1], point_mid[1:-1], np.array(points1), point_init[1:]],
+            axis=0,
+        )

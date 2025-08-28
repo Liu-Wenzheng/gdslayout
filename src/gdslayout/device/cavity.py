@@ -5,7 +5,10 @@ from gdsfactory.typings import Any
 
 from ..utils import path_to_polygon, translate_array, correct_euler
 from ..utils import spiral_inner_connector, spiral_outer_connector
+from . import register_device
 
+
+@register_device("ring")
 def ring(
     width: float = 1.0, 
     radius: float = 50.0, 
@@ -38,6 +41,7 @@ def ring(
     return D, P
 
 
+@register_device("racetrack")
 def race_track(
         width: float = 1.0, 
         radius: float = 50.0, 
@@ -76,6 +80,7 @@ def race_track(
     return component, path
 
 
+@register_device("spiral")
 def spiral(
         straight_length: float = 50, 
         left_length: float = 300, 

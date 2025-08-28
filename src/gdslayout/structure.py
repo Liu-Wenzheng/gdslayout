@@ -12,7 +12,7 @@ import gdsfactory as gf
 from gdsfactory.port import Port
 
 from . import init_component
-from .device import *
+from .device import device_registry, coupler_registry, ensure_discovered
 
 def _get_derivatives(polyline, idx, is_closed=False):
     """Helper to get first and second derivatives at an index using finite differences."""
@@ -216,58 +216,52 @@ class Structure:
             tuple: (device_component, device_path), device_offset
         """
 
-        device_functions = {
-            'ring': ring,
-            'spiral': spiral,
-            'racetrack': race_track,
-            'spiral_archimedean1': spiral_archimedean1,
-            'spiral_archimedean2': spiral_archimedean2,
-            'PhC_optomechanics1': PhC_optomechanics1,
-            'PhC_optomechanics2': PhC_optomechanics2,
-            'optomechanical_mass': optomechanical_mass,
-        }
-        
+        ensure_discovered()
+
+        if details:
+            print(f"Auto-detected {self.num_devices} devices in configuration")
+
+        def _inject_layer(cfg: dict) -> dict:
+            cfg = copy.deepcopy(cfg)
+            cfg['layer'] = self.config['layer']
+            return cfg
         
         if details:
             print(f"Auto-detected {self.num_devices} devices in configuration")
 
         if self.num_devices == 1:
 
-            device_config = copy.deepcopy(self.config['device'])
+            device_config = _inject_layer(self.config['device'])
             device_type = device_config.pop('type')
-            
-            if device_type not in device_functions:
-                raise ValueError(f"Unknown device type: {device_type}. Expected one of: {list(device_functions.keys())}")
-            
-            device_config['layer'] = self.config['layer']
-            
+
             if details:
                 print(f"Loading single device type: {device_type}")
                 print(f"Device config: {device_config}")
-
-            device_function = device_functions[device_type]
-            return device_function(**device_config)
-        
+            try:
+                provider = device_registry.resolve(device_type)
+            except KeyError as e:
+                raise ValueError(f"Unknown device type: {device_type}. "
+                                 f"Available: {device_registry.names()}") from e
+            return provider(**device_config)
         else:
             self.devices = []
             combined_paths = []
             
             for i, device_data in enumerate(self.config['device']):
-                device_config = copy.deepcopy(device_data)
+                device_config = _inject_layer(device_data)
                 device_type = device_config.pop('type')
-                
-                if device_type not in device_functions:
-                    raise ValueError(f"Unknown device type: {device_type}. Expected one of: {list(device_functions.keys())}")
-                
-                device_config['layer'] = self.config['layer']
                 
                 if details:
                     print(f"Loading device {i+1}/{self.num_devices} - type: {device_type}")
                     print(f"Device config: {device_config}")
-                
-                device_function = device_functions[device_type]
-                device_component, device_path = device_function(**device_config)
 
+                try:
+                    provider = device_registry.resolve(device_type)
+                except KeyError as e:
+                    raise ValueError(f"Unknown device type: {device_type}. "
+                                     f"Available: {device_registry.names()}") from e
+
+                device_component, device_path = provider(**device_config)
                 self.devices.append(device_component)
                 combined_paths.append(device_path)
 
@@ -280,7 +274,6 @@ class Structure:
                     device.add_ports(device_ref.ports)
             
             self._connect_devices(device_refs)
-
             return (device, combined_paths)
         
     
@@ -299,16 +292,9 @@ class Structure:
             tuple: (coupler_component, coupler_path), gap_distance
         """
     
+        ensure_discovered()
+
         coupler_config = copy.deepcopy(self.config['coupler'])
-    
-        coupler_functions = {
-            'pulley': symmetric_pulley_coupler,
-            'asym_pulley': asymmetric_pulley_coupler,
-            'out_point': out_point_coupler,
-            'dual_out_point': dual_out_point_coupler,
-            'point': point_coupler,
-            'port_coupler': port_coupler
-        }
 
         if not self.port_coupling:
             coupler_config_list = [coupler_config]
@@ -316,15 +302,22 @@ class Structure:
             coupler_config_list = coupler_config
             coupler_component_list = []
             coupler_path_list = []
+
         for coupler_config in coupler_config_list:
             coupler_config['layer'] = self.config['layer']
 
             coupler_type = coupler_config.pop('type')
-            if coupler_type not in coupler_functions:
-                raise ValueError(f"Unknown coupler type: {coupler_type}. Expected one of: {list(coupler_functions.keys())}")
+            try:
+                coupler_provider = coupler_registry.resolve(coupler_type)
+            except KeyError as e:
+                raise ValueError(f"Unknown coupler type: {coupler_type}. "
+                                 f"Available: {coupler_registry.names()}") from e
 
             if self.device is not None:
-                coupler_config['center'] = (self._get_devices_id().ports['coupler'].x, self._get_devices_id().ports['coupler'].y + self.config.get('gap', 0) + coupler_config.get('width', 1)/2) if not self.port_coupling else self._get_devices_id().ports['coupler'].center
+                coupler_config['center'] = (
+                    self._get_devices_id().ports['coupler'].x,
+                    self._get_devices_id().ports['coupler'].y + self.config.get('gap', 0) + coupler_config.get('width', 1)/2
+                ) if not self.port_coupling else self._get_devices_id().ports['coupler'].center
             
             # Handle ring_down configuration
             if coupler_config.get('ring_down') is not None:
@@ -386,12 +379,10 @@ class Structure:
                 print(f"Loading coupler type: {coupler_type}")
                 print(f"Coupler config: {coupler_config}")
 
-            coupler_function = coupler_functions[coupler_type]
-
             if not self.port_coupling:
-                return coupler_function(**coupler_config)
+                return coupler_provider(**coupler_config)
             else:
-                coupler_component, coupler_path = coupler_function(**coupler_config)
+                coupler_component, coupler_path = coupler_provider(**coupler_config)
                 coupler_component_list.append(coupler_component)
                 coupler_path_list.append(coupler_path)
 
