@@ -61,7 +61,7 @@ def coupler(config_edge_coupler, side=None, resolution=0.1, layer=(2, 0)):
             edge_coupler = bending_coupler(config_edge_coupler[side]['length'], config_edge_coupler[side]['bending_height'], np.pi * config_edge_coupler[side]['angle']/180, width=config_edge_coupler[side]['width'], resolution=resolution, layer=layer)
             return edge_coupler, 0, config_edge_coupler[side]['length']-config_edge_coupler[side]['width']*np.sin(np.pi * config_edge_coupler[side]['angle']/180)/2, config_edge_coupler[side]['width'], 0
 
-def bending_coupler(l_range, h, θ0, width, resolution, xatol=0.1, layer=(2, 0)):
+def bending_coupler(l_range, h, θ0, width, resolution, xatol=0.1, test=False, layer=(2, 0)):
 
     def curve(l, h, θ0, calculation=True):
         solver = bend8_initial_guess_iter(l, h, θ0=θ0, k0=0, k0p=0, θ1=0, k1=0, k1p=0, steps=100)
@@ -105,8 +105,14 @@ def bending_coupler(l_range, h, θ0, width, resolution, xatol=0.1, layer=(2, 0))
             print("Warning: The optimal value is close to the lower boundary of the search range.")
         path = curve(optimal_l, h, θ0, calculation=False)
         curve_vals = path.curvature()
-        plt.plot(curve_vals[0], curve_vals[1])
-        print(np.max(curve_vals[1]), np.min(curve_vals[1]), f"l_optimal = {optimal_l}")
+        if test:
+            print(f"max curvature: {np.max(curve_vals[1])}", f"min curvature: {np.min(curve_vals[1])}")
+            plt.plot(curve_vals[0], curve_vals[1])
+            plt.xlabel("path")
+            plt.ylabel("curvature")
+            plt.show()
+
+        print(f"l_optimal = {optimal_l}")
         component1 = gf.path.extrude(path, layer=layer, width=width)
         component2 = gf.components.rectangle(size=(width, width/np.cos(θ0)), centered=False, layer=layer)
         c = gf.Component()
