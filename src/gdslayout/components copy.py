@@ -10,7 +10,10 @@ import gdsfactory as gf
 from . import init_component
 from .structure import Structure
 from .layout import Ring_down_distance
-from .utils import coupler
+
+
+import gdsfactory as gf
+
 
 class Cluster():
     def __init__(self, name, config_folder, layer=(2, 0), safe_gap=10, config_edge_coupler="./config_edge_coupler.yaml"):
@@ -22,14 +25,44 @@ class Cluster():
         self.layer = layer
         with open(config_edge_coupler, 'r') as file:
             config_edge_coupler = yaml.safe_load(file)
-            if 'in' not in config_edge_coupler and 'out' not in config_edge_coupler:
-                self.edge_coupler_in, self.edge_offset_in, self.edge_coupler_efflen_in, self.edge_coupler_width_in, self.edge_coupler_port_length_in = coupler(config_edge_coupler, layer=self.layer)
-                self.edge_coupler_out, self.edge_offset_out, self.edge_coupler_efflen_out, self.edge_coupler_width_out, self.edge_coupler_port_length_out = coupler(config_edge_coupler, layer=self.layer)
-            else:
-                self.edge_coupler_in, self.edge_offset_in, self.edge_coupler_efflen_in, self.edge_coupler_width_in, self.edge_coupler_port_length_in = coupler(config_edge_coupler, side='in', layer=self.layer)
-                self.edge_coupler_out, self.edge_offset_out, self.edge_coupler_efflen_out, self.edge_coupler_width_out, self.edge_coupler_port_length_out = coupler(config_edge_coupler, side='out', layer=self.layer)
 
         self.safe_gap = safe_gap
+
+        self.edge_offset_in = config_edge_coupler['in']['offset']
+        self.edge_coupler_efflen_in = config_edge_coupler['in']['length'] - config_edge_coupler['in']['offset']
+        self.edge_coupler_width_in = config_edge_coupler['in']['width']
+        self.edge_coupler_port_width_in = config_edge_coupler['in']['port_len']
+
+        self.edge_offset_out = config_edge_coupler['out']['offset']
+        self.edge_coupler_efflen_out = config_edge_coupler['out']['length'] - config_edge_coupler['out']['offset']
+        self.edge_coupler_width_out = config_edge_coupler['out']['width']
+        self.edge_coupler_port_width_out = config_edge_coupler['out']['port_len']
+
+        # EDGE COUPLER
+        self.edge_coupler_in = gf.import_gds(config_edge_coupler['in']['file'], cellname=config_edge_coupler['in']['cellname'])
+        self.edge_coupler_in.add_port(name="out", center=(self.edge_coupler_in.xmax, self.edge_coupler_in.ymax-self.edge_coupler_width_in/2), width=self.edge_coupler_width_in, layer=layer)
+        if config_edge_coupler['in']['cellname'] == config_edge_coupler['out']['cellname'] and config_edge_coupler['in']['file'] == config_edge_coupler['out']['file']:
+            self.edge_coupler_out = self.edge_coupler_in.copy()
+        else:
+            self.edge_coupler_out = gf.import_gds(config_edge_coupler['out']['file'], cellname=config_edge_coupler['out']['cellname'])
+
+        self.edge_coupler_out.add_port(name="out", center=(self.edge_coupler_out.xmax, self.edge_coupler_out.ymax-self.edge_coupler_width_out/2), width=self.edge_coupler_width_out, orientation=180, layer=layer)
+        
+        """self.edge_coupler_in = import_and_wrap(
+            config_edge_coupler['in']['file'],
+            config_edge_coupler['in']['cellname'],
+            "in",
+            add_left_port=True,
+            port_width=self.edge_coupler_width_in,
+        )
+
+        self.edge_coupler_out = import_and_wrap(
+            config_edge_coupler['out']['file'],
+            config_edge_coupler['out']['cellname'],
+            "out",
+            add_left_port=False,
+            port_width=self.edge_coupler_width_out,
+        )"""
 
     def load(self, config_id_list):
         self.num = len(config_id_list)
@@ -101,40 +134,25 @@ class Cluster():
         y_len = cluster.ymax - cluster.ymin
 
         # L EDGE COUPLER
-        if self.edge_coupler_in is not None:
+        in_coupler = cluster << self.edge_coupler_in
+        # in_coupler.rotate(180)
+        in_coupler.move(origin=(in_coupler.xmin, in_coupler.y),destination=(-self.edge_offset_in + tot_drift[0], taper_in_ref.ports['o1'].y))
 
-            in_coupler = cluster << self.edge_coupler_in
-            in_coupler.rotate(180)
-            in_coupler.move(origin=(in_coupler.xmin, in_coupler.y),destination=(-self.edge_offset_in + tot_drift[0], taper_in_ref.ports['o1'].y))
-
-            if not hasattr(self.edge_coupler_in, "ports") or "coupler" not in self.edge_coupler_in.ports:
-                sig = gf.components.straight(length=self.edge_coupler_port_length_in, cross_section=gf.cross_section.strip(width=self.edge_coupler_width_in, layer=self.layer))
-                sig_ref = cluster << sig
-                sig_ref.connect('o1', in_coupler.ports['out'])
-                sig_ref.movex(-self.edge_coupler_port_length_in)
-            else:
-                in_coupler.connect('coupler', taper_in_ref.ports['o1'])
-            
-            text_pos_in = np.array([in_coupler.x, in_coupler.ymax + 10])
-        else:
-            text_pos_in = np.array([taper_in_ref.ports['o1'].x, taper_in_ref.ymax + 10])
+        sig = gf.components.straight(length=self.edge_coupler_port_width_in, cross_section=gf.cross_section.strip(width=self.edge_coupler_width_in, layer=self.layer))
+        sig_ref = cluster << sig
+        sig_ref.connect('o1', in_coupler.ports['out'])
+        sig_ref.movex(-self.edge_coupler_port_width_in)
 
         # R EDGE COUPLER
-        if self.edge_coupler_out is not None:
-            out_coupler = cluster << self.edge_coupler_out
-            out_coupler.move(origin=(out_coupler.xmax, out_coupler.y), destination=(self.edge_offset_out + tot_drift[0] + length_tot, taper_out_ref.ports['o2'].y))
+        out_coupler = cluster << self.edge_coupler_out
+        out_coupler.move(origin=(out_coupler.xmax, out_coupler.y), destination=(self.edge_offset_out + tot_drift[0] + length_tot, taper_out_ref.ports['o2'].y))
 
-            if not hasattr(self.edge_coupler_out, "ports") or "coupler" not in self.edge_coupler_out.ports:
-                sig2 = gf.components.straight(length=self.edge_coupler_port_length_out, cross_section=gf.cross_section.strip(width=self.edge_coupler_width_out, layer=self.layer))
-                sig2_ref = cluster << sig2
-                sig2_ref.connect('o1', out_coupler.ports['out'])
-                sig2_ref.movex(self.edge_coupler_port_length_out)
-            
-            text_pos_out = np.array([out_coupler.x, out_coupler.ymax + 10])
-        else:
-            text_pos_out = np.array([taper_out_ref.ports['o2'].x, taper_out_ref.ymax + 10])
+        sig2 = gf.components.straight(length=self.edge_coupler_port_width_out, cross_section=gf.cross_section.strip(width=self.edge_coupler_width_out, layer=self.layer))
+        sig2_ref = cluster << sig2
+        sig2_ref.connect('o1', out_coupler.ports['out'])
+        sig2_ref.movex(self.edge_coupler_port_width_out)
 
-        self.text_pos = np.concatenate((text_pos_in, text_pos_out))
+        self.text_pos = np.array([[in_coupler.x, in_coupler.ymax + 10, out_coupler.x, out_coupler.ymax + 10]])
 
         return cluster, y_len
 
@@ -156,19 +174,14 @@ class Cluster():
             component_ref = sub_cluster[i].add_ref(self.component[i])
             component_ref.move(origin=(component_ref.ports['device_center'].x, component_ref.ports['in'].y), destination=(x_s[i], y_max))
 
-            if i == 0:
-                taper_in_length = component_ref.ports['in'].center[0] - self.edge_coupler_efflen_in - tot_drift[0]
-                taper_out_length = -component_ref.ports['out'].center[0] - self.edge_coupler_efflen_out + tot_drift[0] + length_tot
-            else:
-                taper_in_length = component_ref.ports['in'].center[0] - self.edge_coupler_efflen_out - tot_drift[0]
-                taper_out_length = -component_ref.ports['out'].center[0] - self.edge_coupler_efflen_in + tot_drift[0] + length_tot
-
             # TAPER IN
+            taper_in_length = component_ref.ports['in'].center[0] - self.edge_coupler_efflen_in - tot_drift[0]
             taper_in = gf.components.taper(length=taper_in_length, width1=self.edge_coupler_width_in, width2=component_ref.ports['in'].width, layer=self.layer)
             taper_in_ref = self.taper_connect(sub_cluster[i], component_ref, 'in', taper_in, taper_in_length)
             taper_in_ref.connect('o2', component_ref.ports['in'])
 
             # TAPER OUT
+            taper_out_length = -component_ref.ports['out'].center[0] - self.edge_coupler_efflen_out + tot_drift[0] + length_tot
             taper_out = gf.components.taper(length=taper_out_length, width1=component_ref.ports['out'].width, width2=self.edge_coupler_width_out, layer=self.layer)
             taper_out_ref = self.taper_connect(sub_cluster[i], component_ref, 'out', taper_out, taper_out_length)
             taper_out_ref.connect('o1', component_ref.ports['out'])
@@ -176,51 +189,31 @@ class Cluster():
             ymax_arr.append(sub_cluster[i].ymax)
             
             # L EDGE COUPLER
-            if self.edge_coupler_in is not None:
-                in_coupler = sub_cluster[i] << self.edge_coupler_in
-                if i == 0:
-                    in_coupler.rotate(180)
-                    in_coupler.move(origin=(in_coupler.xmin, in_coupler.y),destination=(-self.edge_offset_in + tot_drift[0], taper_in_ref.ports['o1'].y))
-                else:
-                    in_coupler.move(origin=(in_coupler.xmax, in_coupler.y), destination=(self.edge_offset_out + tot_drift[0] + length_tot, taper_out_ref.ports['o2'].y))
+            in_coupler = sub_cluster[i] << self.edge_coupler_in
+            # in_coupler.rotate(180)
+            in_coupler.move(origin=(in_coupler.xmin, in_coupler.y),destination=(-self.edge_offset_in + tot_drift[0], taper_in_ref.ports['o1'].y))
 
-                if not hasattr(self.edge_coupler_in, "ports") or "coupler" not in self.edge_coupler_in.ports:
-                    sig = gf.components.straight(length=self.edge_coupler_port_length_in, cross_section=gf.cross_section.strip(width=self.edge_coupler_width_in, layer=self.layer))
-                    sig_ref = sub_cluster[i] << sig
-                    sig_ref.connect('o1', in_coupler.ports['out'])
-                    sig_ref.movex(-self.edge_coupler_port_length_in)
-                else:
-                    in_coupler.connect('coupler', taper_in_ref.ports['o1']) if i == 0 else in_coupler.connect('coupler', taper_out_ref.ports['o2'])
-
-                text_pos_in = np.array([in_coupler.x, in_coupler.ymax + 10]) if i == 0 else np.array([in_coupler.x-length_tot, in_coupler.ymax + 10 + 2*(y_flip - in_coupler.y )])
-            else:
-                text_pos_in = np.array([taper_in_ref.ports['o1'].x, taper_in_ref.ymax + 10]) if i == 0 else np.array([taper_out_ref.ports['o1'].x-length_tot, taper_out_ref.ymax + 10 + 2*(y_flip - taper_out_ref.y )])
+            sig = gf.components.straight(length=self.edge_coupler_port_width_in, cross_section=gf.cross_section.strip(width=self.edge_coupler_width_in, layer=self.layer))
+            sig_ref = sub_cluster[i] << sig
+            sig_ref.connect('o1', in_coupler.ports['out'])
+            sig_ref.movex(-self.edge_coupler_port_width_in)
 
             # R EDGE COUPLER
-            if self.edge_coupler_out is not None:
-                out_coupler = sub_cluster[i] << self.edge_coupler_out
-                if i == 0:
-                    out_coupler.move(origin=(out_coupler.xmax, out_coupler.y), destination=(self.edge_offset_out + tot_drift[0] + length_tot, taper_out_ref.ports['o2'].y))
-                else:
-                    out_coupler.rotate(180)
-                    out_coupler.move(origin=(out_coupler.xmin, out_coupler.y),destination=(-self.edge_offset_in + tot_drift[0], taper_in_ref.ports['o1'].y))
+            out_coupler = sub_cluster[i] << self.edge_coupler_out
+            out_coupler.move(origin=(out_coupler.xmax, out_coupler.y), destination=(self.edge_offset_out + tot_drift[0] + length_tot, taper_out_ref.ports['o2'].y))
 
-                if not hasattr(self.edge_coupler_out, "ports") or "coupler" not in self.edge_coupler_out.ports:
-                    sig2 = gf.components.straight(length=self.edge_coupler_port_length_out, cross_section=gf.cross_section.strip(width=self.edge_coupler_width_out, layer=self.layer))
-                    sig2_ref = sub_cluster[i] << sig2
-                    sig2_ref.connect('o1', out_coupler.ports['out'])
-                    sig2_ref.movex(self.edge_coupler_port_length_out)
-                else:
-                    out_coupler.connect('coupler', taper_out_ref.ports['o2']) if i == 0 else out_coupler.connect('coupler', taper_in_ref.ports['o1'])
+            sig2 = gf.components.straight(length=self.edge_coupler_port_width_out, cross_section=gf.cross_section.strip(width=self.edge_coupler_width_out, layer=self.layer))
+            sig2_ref = sub_cluster[i] << sig2
+            sig2_ref.connect('o1', out_coupler.ports['out'])
+            sig2_ref.movex(self.edge_coupler_port_width_out)
 
-                text_pos_out = np.array([out_coupler.x, out_coupler.ymax + 10]) if i == 0 else np.array([out_coupler.x + length_tot, out_coupler.ymax + 10 + 2*(y_flip - out_coupler.y )])
+            if i == 0:
+                self.text_pos[i] = np.array([in_coupler.x, in_coupler.ymax + 10, out_coupler.x, out_coupler.ymax + 10])
             else:
-                text_pos_out = np.array([taper_out_ref.ports['o2'].x, taper_out_ref.ymax + 10]) if i == 0 else np.array([taper_in_ref.ports['o2'].x+ length_tot, taper_in_ref.ymax + 10 + 2*(y_flip - taper_in_ref.y )])
+                self.text_pos[i] = np.array([in_coupler.x, in_coupler.ymax + 10 + 2*(y_flip - in_coupler.y ), out_coupler.x, out_coupler.ymax + 10 + 2*(y_flip - out_coupler.y )])
 
-            self.text_pos[i] = np.concatenate((text_pos_in, text_pos_out))
-            
         sub_cluster[1] = sub_cluster[1].rotate(angle=180, center=(tot_drift[0] + (length_tot+x_border[0]-x_border[1])/2, y_flip))
-        return (sub_cluster[0], sub_cluster[1]), np.max(self.component_ysize)+self.edge_coupler_width_in+2*self.safe_gap
+        return (sub_cluster[0], sub_cluster[1]), np.max(self.component_ysize)+(self.edge_coupler_width_out+self.edge_coupler_width_in)/2+2*self.safe_gap
 
 
     def build_layout_n(self, x_border, y_border, length_tot, y_drift, edge_coupler_distance, tot_drift, auto=(True, False), manual=([], [])):
@@ -296,40 +289,26 @@ class Cluster():
             ymin_arr.append(np.min([component_ref.ymin, taper_out_ref.ymin]))
 
             # L EDGE COUPLER
-            if self.edge_coupler_in is not None:
+            in_coupler = cluster << self.edge_coupler_in
+            # in_coupler.rotate(180)
+            in_coupler.move(origin=(in_coupler.xmin, in_coupler.ports['out'].center[1]), destination=(-self.edge_offset_in + tot_drift[0], taper_in_ref.ports['o1'].y))
+            # in_coupler.move(origin=(in_coupler.xmin, in_coupler.y),destination=(-self.edge_offset_in + tot_drift[0], taper_in_ref.ports['o1'].y))
 
-                in_coupler = cluster << self.edge_coupler_in
-                in_coupler.rotate(180)
-                in_coupler.move(origin=(in_coupler.xmin, in_coupler.y),destination=(-self.edge_offset_in + tot_drift[0], taper_in_ref.ports['o1'].y))
-
-                if not hasattr(self.edge_coupler_in, "ports") or "coupler" not in self.edge_coupler_in.ports:
-                    sig = gf.components.straight(length=self.edge_coupler_port_length_in, cross_section=gf.cross_section.strip(width=self.edge_coupler_width_in, layer=self.layer))
-                    sig_ref = cluster << sig
-                    sig_ref.connect('o1', in_coupler.ports['out'])
-                    sig_ref.movex(-self.edge_coupler_port_length_in)
-                else:
-                    in_coupler.connect('coupler', taper_in_ref.ports['o1'])
-                
-                text_pos_in = np.array([in_coupler.x, in_coupler.ymax + 10])
-            else:
-                text_pos_in = np.array([taper_in_ref.ports['o1'].x, taper_in_ref.ymax + 10])
+            sig = gf.components.straight(length=self.edge_coupler_port_width_in, cross_section=gf.cross_section.strip(width=self.edge_coupler_width_in, layer=self.layer))
+            sig_ref = cluster << sig
+            sig_ref.connect('o1', in_coupler.ports['out'])
+            sig_ref.movex(-self.edge_coupler_port_width_in)
 
             # R EDGE COUPLER
-            if self.edge_coupler_out is not None:
-                out_coupler = cluster << self.edge_coupler_out
-                out_coupler.move(origin=(out_coupler.xmax, out_coupler.y), destination=(self.edge_offset_out + tot_drift[0] + length_tot, taper_out_ref.ports['o2'].y))
+            out_coupler = cluster << self.edge_coupler_out
+            out_coupler.move(origin=(out_coupler.xmax, out_coupler.y), destination=(self.edge_offset_out + tot_drift[0] + length_tot, taper_out_ref.ports['o2'].y))
 
-                if not hasattr(self.edge_coupler_out, "ports") or "coupler" not in self.edge_coupler_out.ports:
-                    sig2 = gf.components.straight(length=self.edge_coupler_port_length_out, cross_section=gf.cross_section.strip(width=self.edge_coupler_width_out, layer=self.layer))
-                    sig2_ref = cluster << sig2
-                    sig2_ref.connect('o1', out_coupler.ports['out'])
-                    sig2_ref.movex(self.edge_coupler_port_length_out)
-                
-                text_pos_out = np.array([out_coupler.x, out_coupler.ymax + 10])
-            else:
-                text_pos_out = np.array([taper_out_ref.ports['o2'].x, taper_out_ref.ymax + 10])
+            sig2 = gf.components.straight(length=self.edge_coupler_port_width_out, cross_section=gf.cross_section.strip(width=self.edge_coupler_width_out, layer=self.layer))
+            sig2_ref = cluster << sig2
+            sig2_ref.connect('o1', out_coupler.ports['out'])
+            sig2_ref.movex(self.edge_coupler_port_width_out)
 
-            self.text_pos[i] = np.concatenate((text_pos_in, text_pos_out))
+            self.text_pos[i] = np.array([in_coupler.x, in_coupler.ymax + 10, out_coupler.x, out_coupler.ymax + 10])
 
         return cluster, max(ymax_arr)-min(ymin_arr)
 

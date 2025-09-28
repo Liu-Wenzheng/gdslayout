@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.integrate import quad
 from scipy.optimize import fsolve
+from scipy.optimize import minimize_scalar
 import matplotlib.pyplot as plt
 
 import gdsfactory as gf
@@ -37,6 +38,89 @@ def translate_array(arr, percentage):
         return arr.copy()
 
     return translated_arr
+
+def coupler(config_edge_coupler, side=None, resolution=0.1, layer=(2, 0)):
+    if side is None:
+        if config_edge_coupler['file']:
+            edge_coupler = gf.import_gds(config_edge_coupler['file'], cellname=config_edge_coupler['cellname'])
+            edge_coupler.add_port(name="out", center=(edge_coupler.xmin, edge_coupler.y), width=config_edge_coupler['width'], orientation=180, layer=(2, 0))
+            return edge_coupler, config_edge_coupler['offset'], config_edge_coupler['length'] - config_edge_coupler['offset'], config_edge_coupler['width'], config_edge_coupler['port_len']
+        elif config_edge_coupler['type'] == 'straight':
+            return None, 0, 0, config_edge_coupler['width'], 0
+        elif config_edge_coupler['type'] == 'bending':
+            edge_coupler = bending_coupler(config_edge_coupler['length'], config_edge_coupler['bending_height'], np.pi * config_edge_coupler['angle']/180, width=config_edge_coupler['width'], resolution=resolution, layer=layer)
+            return edge_coupler, 0, config_edge_coupler['length']-config_edge_coupler['width']*np.sin(np.pi * config_edge_coupler['angle']/180)/2, config_edge_coupler['width'], 0
+    else:
+        if config_edge_coupler[side]['file']:
+            edge_coupler = gf.import_gds(config_edge_coupler[side]['file'], cellname=config_edge_coupler[side]['cellname'])
+            edge_coupler.add_port(name="out", center=(edge_coupler.xmin, edge_coupler.y), width=config_edge_coupler[side]['width'], orientation=180, layer=(2, 0))
+            return edge_coupler, config_edge_coupler[side]['offset'], config_edge_coupler[side]['length'] - config_edge_coupler[side]['offset'], config_edge_coupler[side]['width'], config_edge_coupler[side]['port_len']
+        elif config_edge_coupler[side]['type'] == 'straight':
+            return None, 0, 0, config_edge_coupler[side]['width'], 0
+        elif config_edge_coupler[side]['type'] == 'bending':
+            edge_coupler = bending_coupler(config_edge_coupler[side]['length'], config_edge_coupler[side]['bending_height'], np.pi * config_edge_coupler[side]['angle']/180, width=config_edge_coupler[side]['width'], resolution=resolution, layer=layer)
+            return edge_coupler, 0, config_edge_coupler[side]['length']-config_edge_coupler[side]['width']*np.sin(np.pi * config_edge_coupler[side]['angle']/180)/2, config_edge_coupler[side]['width'], 0
+
+def bending_coupler(l_range, h, θ0, width, resolution, xatol=0.1, layer=(2, 0)):
+
+    def curve(l, h, θ0, calculation=True):
+        solver = bend8_initial_guess_iter(l, h, θ0=θ0, k0=0, k0p=0, θ1=0, k1=0, k1p=0, steps=100)
+        x_pos_in, y_pos_in = solver.draw_path(plot=False)
+        dx = np.diff(x_pos_in)
+        dy = np.diff(y_pos_in)
+        ds = np.sqrt((dx) ** 2 + (dy) ** 2)
+        length_s = np.sum(ds)   
+        n = int(length_s/resolution)
+        x_pos_in, y_pos_in = solver.draw_path(n, plot=False)
+        points = np.column_stack((x_pos_in, y_pos_in))
+        path = gf.Path(points)
+        curve = path.curvature()
+        if calculation:
+            return np.max(curve[1])
+        else:
+            return path
+
+    if isinstance(l_range, (int, float, np.integer, np.floating)) or (isinstance(l_range, (list, np.ndarray)) and len(l_range) == 1):
+        optimal_l = l_range if not isinstance(l_range, (list, np.ndarray)) else l_range[0]
+        path = curve(optimal_l, h, θ0, calculation=False)
+        curve_vals = path.curvature()
+        component1 = gf.path.extrude(path, layer=layer, width=width)
+        component2 = gf.components.rectangle(size=(width, width/np.cos(θ0)), centered=False, layer=layer)
+        c = gf.Component()
+        c << component1
+        component2_ref = c.add_ref(component2)
+        component2_ref.move((width * (np.sin(θ0)/2-1), -width * np.cos(θ0)/2))
+        intersection = gf.boolean(component1, component2_ref, operation="not", layer=layer)
+        c1 = gf.Component()
+        c1 << intersection
+        c1.add_port(name="coupler", center=(optimal_l, h), width=width, layer=layer)
+        return c1.rotate(180)
+    
+    elif isinstance(l_range, (list, np.ndarray)) and len(l_range) == 2:
+        result = minimize_scalar(curve, bounds=l_range, args=(h, θ0), options={'xatol': xatol, 'maxiter': 30}, method='bounded')
+        optimal_l = result.x
+        if optimal_l - xatol < l_range[0]:
+            print("Warning: The optimal value is close to the upper boundary of the search range.")
+        elif optimal_l + xatol > l_range[1]:
+            print("Warning: The optimal value is close to the lower boundary of the search range.")
+        path = curve(optimal_l, h, θ0, calculation=False)
+        curve_vals = path.curvature()
+        plt.plot(curve_vals[0], curve_vals[1])
+        print(np.max(curve_vals[1]), np.min(curve_vals[1]), f"l_optimal = {optimal_l}")
+        component1 = gf.path.extrude(path, layer=layer, width=width)
+        component2 = gf.components.rectangle(size=(width, width/np.cos(θ0)), centered=False, layer=layer)
+        c = gf.Component()
+        c << component1
+        component2_ref = c.add_ref(component2)
+        component2_ref.move((width * (np.sin(θ0)/2-1), -width * np.cos(θ0)/2))
+        intersection = gf.boolean(component1, component2_ref, operation="not", layer=layer)
+        c1 = gf.Component()
+        c1 << intersection
+        c1.add_port(name="coupler", center=(optimal_l, h), width=width, layer=layer)
+        return c1
+    else:
+        raise ValueError("l_range must be a single value or a list/array of length 2.")
+
 
 def path_to_polygon(
     path: Union[gf.Path, NDArray[np.floating]],
