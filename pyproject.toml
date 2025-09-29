@@ -1,6 +1,31 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "gdslayout"
 version = "0.1.0"
+description = "Python library for designing chips' layout."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.13"
+authors = [{ name = "Liu-Wenzheng", email = "lwz.xqdz@gmail.com" }]
+dependencies = [
+  "numpy>=2.3",
+  "matplotlib>=3.10",
+  "scipy>=1.16",
+  "pandas>=2.3",
+  "rich>=14.1",
+  "PyYAML>=6.0",
+  "gdsfactory>=9.18",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]  # Look for packages inside the 'src' directory
+
+[project.urls]
+Homepage = "https://github.com/Liu-Wenzheng/gflayout"
+Issues   = "https://github.com/Liu-Wenzheng/gflayout/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/gflayout"]
