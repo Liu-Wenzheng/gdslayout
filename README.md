@@ -1,8 +1,8 @@
-# GFlayout 0.1.0
+# GDSLayout 0.1.0
 
-GFlayout is a Python library for designing chips’ layout. Built upon the GDSFactory package, GFlayout introduces a range of novel structures within its `device` directory. These additions include components such as **high-Q resonators**, **photonic crystals**, and **mechanical structures**.
+GDSLayout is a Python library for designing chips’ layout. Built upon the GDSFactory package, GDSLayout introduces a range of novel structures within its `device` directory. These additions include components such as **high-Q resonators**, **photonic crystals**, and **mechanical structures**.
 
-A key feature of GFlayout is its modular and configurable approach to design. Each structural unit is defined by a dedicated YAML configuration file. This allows for a streamlined workflow where users can generate complex layouts by retrieving the corresponding structural units. The library supports various layout methodologies, including the generation of single-device, dual-device, and multi-device layouts to produce the final chip design.
+A key feature of GDSLayout is its modular and configurable approach to design. Each structural unit is defined by a dedicated YAML configuration file. This allows for a streamlined workflow where users can generate complex layouts by retrieving the corresponding structural units. The library supports various layout methodologies, including the generation of single-device, dual-device, and multi-device layouts to produce the final chip design.
 
 ## Quick Start
 

@@ -24,8 +24,8 @@ dependencies = [
 where = ["src"]  # Look for packages inside the 'src' directory
 
 [project.urls]
-Homepage = "https://github.com/Liu-Wenzheng/gflayout"
-Issues   = "https://github.com/Liu-Wenzheng/gflayout/issues"
+Homepage = "https://github.com/Liu-Wenzheng/gdslayout"
+Issues   = "https://github.com/Liu-Wenzheng/gdslayout/issues"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/gflayout"]
+packages = ["src/gdslayout"]
