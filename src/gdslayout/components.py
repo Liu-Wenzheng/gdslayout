@@ -24,7 +24,7 @@ class Cluster():
             config_edge_coupler = yaml.safe_load(file)
             if 'in' not in config_edge_coupler and 'out' not in config_edge_coupler:
                 self.edge_coupler_in, self.edge_offset_in, self.edge_coupler_efflen_in, self.edge_coupler_width_in, self.edge_coupler_port_length_in = coupler(config_edge_coupler, layer=self.layer)
-                self.edge_coupler_out, self.edge_offset_out, self.edge_coupler_efflen_out, self.edge_coupler_width_out, self.edge_coupler_port_length_out = coupler(config_edge_coupler, layer=self.layer)
+                self.edge_coupler_out, self.edge_offset_out, self.edge_coupler_efflen_out, self.edge_coupler_width_out, self.edge_coupler_port_length_out = (self.edge_coupler_in, self.edge_offset_in, self.edge_coupler_efflen_in, self.edge_coupler_width_in, self.edge_coupler_port_length_in)
             else:
                 self.edge_coupler_in, self.edge_offset_in, self.edge_coupler_efflen_in, self.edge_coupler_width_in, self.edge_coupler_port_length_in = coupler(config_edge_coupler, side='in', layer=self.layer)
                 self.edge_coupler_out, self.edge_offset_out, self.edge_coupler_efflen_out, self.edge_coupler_width_out, self.edge_coupler_port_length_out = coupler(config_edge_coupler, side='out', layer=self.layer)
@@ -191,10 +191,11 @@ class Cluster():
                     sig_ref.movex(-self.edge_coupler_port_length_in)
                 else:
                     in_coupler.connect('coupler', taper_in_ref.ports['o1']) if i == 0 else in_coupler.connect('coupler', taper_out_ref.ports['o2'])
-
-                text_pos_in = np.array([in_coupler.x, in_coupler.ymax + 10]) if i == 0 else np.array([in_coupler.x-length_tot, in_coupler.ymax + 10 + 2*(y_flip - in_coupler.y )])
+                
+                text_pos_in = np.array([in_coupler.x, in_coupler.ymax + 10]) if i == 0 else np.array([2*tot_drift[0]+length_tot - in_coupler.x, in_coupler.ymax + 10 + 2*(y_flip - in_coupler.y )])
+                print("in_coupler: ",i, in_coupler.x, length_tot)
             else:
-                text_pos_in = np.array([taper_in_ref.ports['o1'].x, taper_in_ref.ymax + 10]) if i == 0 else np.array([taper_out_ref.ports['o1'].x-length_tot, taper_out_ref.ymax + 10 + 2*(y_flip - taper_out_ref.y )])
+                text_pos_in = np.array([tot_drift[0], taper_in_ref.ymax + 10]) if i == 0 else np.array([tot_drift[0], taper_out_ref.ymax + 10 + 2*(y_flip - taper_out_ref.y )])
 
             # R EDGE COUPLER
             if self.edge_coupler_out is not None:
@@ -213,10 +214,11 @@ class Cluster():
                 else:
                     out_coupler.connect('coupler', taper_out_ref.ports['o2']) if i == 0 else out_coupler.connect('coupler', taper_in_ref.ports['o1'])
 
-                text_pos_out = np.array([out_coupler.x, out_coupler.ymax + 10]) if i == 0 else np.array([out_coupler.x + length_tot, out_coupler.ymax + 10 + 2*(y_flip - out_coupler.y )])
+                text_pos_out = np.array([out_coupler.x, out_coupler.ymax + 10]) if i == 0 else np.array([2*tot_drift[0]+length_tot - out_coupler.x, out_coupler.ymax + 10 + 2*(y_flip - out_coupler.y )])
+                print("out_coupler: ",i, out_coupler.x)
             else:
-                text_pos_out = np.array([taper_out_ref.ports['o2'].x, taper_out_ref.ymax + 10]) if i == 0 else np.array([taper_in_ref.ports['o2'].x+ length_tot, taper_in_ref.ymax + 10 + 2*(y_flip - taper_in_ref.y )])
-
+                text_pos_out = np.array([tot_drift[0]+length_tot, taper_out_ref.ymax + 10]) if i == 0 else np.array([tot_drift[0]+length_tot, taper_in_ref.ymax + 10 + 2*(y_flip - taper_in_ref.y )])
+            
             self.text_pos[i] = np.concatenate((text_pos_in, text_pos_out))
             
         sub_cluster[1] = sub_cluster[1].rotate(angle=180, center=(tot_drift[0] + (length_tot+x_border[0]-x_border[1])/2, y_flip))
