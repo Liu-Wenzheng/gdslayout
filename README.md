@@ -1,4 +1,4 @@
-# GDSLayout 0.1.0
+# GDSLayout 0.1.1
 
 GDSLayout is a Python library for designing chips’ layout. Built upon the GDSFactory package, GDSLayout introduces a range of novel structures within its `device` directory. These additions include components such as **high-Q resonators**, **photonic crystals**, and **mechanical structures**.
 
