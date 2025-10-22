@@ -18,6 +18,7 @@ class ArchimedeanSpiral:
         return np.asarray(th, dtype=float), np.isscalar(th)
     def _ret(self, v, is_scalar):
         v = np.asarray(v); return float(v) if is_scalar else v
+    
     @staticmethod
     def _wrap_pi(x):
         return (x + np.pi) % (2*np.pi) - np.pi
@@ -346,6 +347,7 @@ class SpiralArchimedean1:
         self.spiral_width = self._compute_width_profile(width)
         component = path_to_polygon(path, width_fn=self.spiral_width, layer=layer)[0]
         component.add_port(name="coupler", center=(self.x_c, self.y_c + width / 2), width=1, orientation=0, layer=layer)
+        component.width = self.spiral_width
         return component, path
 
     def _spiral_params(self, inner_gap: float, spiral_gap: float):
