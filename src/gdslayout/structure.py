@@ -477,7 +477,7 @@ class Structure:
         return self.component
     
 
-    def lumerical(self, decoupling_width=4.0, auto_compute='wg_coupling', plot=False):
+    def lumerical(self, decoupling_width=4.0, cell=None, auto_compute='wg_coupling', plot=False):
         """
         Generate Lumerical script for the structure.
         
@@ -487,7 +487,7 @@ class Structure:
         Returns:
             str: Lumerical script
         """
-        component = self.build()
+        component = self.build(cell=cell)
 
         if hasattr(self.device_path, 'points'):
             points1 = self.device_path.points
@@ -554,9 +554,9 @@ class Structure:
 
         return info, component
 
-    def create_gds(self, gds_filename='../structure.gds', lumerical_plugins=False, auto_compute='wg_coupling', decoupling_width=4.0):
+    def create_gds(self, gds_filename='../structure.gds', cell=None, lumerical_plugins=False, auto_compute='wg_coupling', decoupling_width=4.0):
         if lumerical_plugins:
-            info, component = self.lumerical(decoupling_width=decoupling_width, auto_compute=auto_compute, plot=False)
+            info, component = self.lumerical(decoupling_width=decoupling_width, cell=cell, auto_compute=auto_compute, plot=False)
             component.write_gds(gdspath=gds_filename)
             return info
         else:
@@ -569,6 +569,6 @@ class Structure:
                 coupler.write_gds(gdspath=gds_filename)
                 return gds_filename
             if 'device' in self.config and 'coupler' in self.config:
-                component = self.build()
+                component = self.build(cell=cell)
                 component.write_gds(gdspath=gds_filename)
                 return gds_filename
